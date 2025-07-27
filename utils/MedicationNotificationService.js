@@ -13,7 +13,7 @@ const MEDICATION_SCHEDULE_KEY = "@medication_schedule";
 
 // Default times for medication schedules
 export const DEFAULT_TIMES = {
-  Morning: { hour: 8, minute: 0 }, // 8:00 AM
+  Morning: { hour: 11, minute: 43 }, // 8:00 AM
   Evening: { hour: 19, minute: 20 }, // 6:00 PM
   Night: { hour: 0, minute: 25 }, // 12:25 AM
 };
