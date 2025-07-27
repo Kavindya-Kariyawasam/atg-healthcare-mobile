@@ -187,7 +187,7 @@ const MessagingCN = ({ navigation }) => {
               <TouchableOpacity
                 key={client.id}
                 style={styles.chatListItem}
-                onPress={() => navigation.navigate("Messaging", { clientId: client.id })}
+                onPress={() => navigation.navigate("Messaging", { clientId: client.id, clientFullName: client.fullName })}
               >
                 <View style={styles.chatListTextContainer}>
                   <Text style={styles.clientName}>{client.fullName}</Text>

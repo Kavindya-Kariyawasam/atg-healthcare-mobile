@@ -29,6 +29,7 @@ const ChatScreen = ({ navigation, route }) => {
   const [receiverId, setReceiverId] = useState(null);
   const [loadingReceiver, setLoadingReceiver] = useState(true);
   const [receiverError, setReceiverError] = useState(null);
+  const [clientFullName, setClientFullName] = useState(route?.params?.clientFullName || null);
 
   // Detect user type and fetch care navigator if client
   useEffect(() => {
@@ -71,6 +72,10 @@ const ChatScreen = ({ navigation, route }) => {
       } else {
         // For care navigator, receiverId will be set via props (when opening a chat with a client)
         setLoadingReceiver(false);
+        // Set client full name from route params if available
+        if (route?.params?.clientFullName) {
+          setClientFullName(route.params.clientFullName);
+        }
       }
     };
     loadUser();
@@ -80,6 +85,10 @@ const ChatScreen = ({ navigation, route }) => {
   useEffect(() => {
     if (currentUser && currentUser.isCareNavigator && route?.params?.clientId) {
       setReceiverId(route.params.clientId);
+      // Set client full name from route params if available
+      if (route?.params?.clientFullName) {
+        setClientFullName(route.params.clientFullName);
+      }
     }
   }, [currentUser, route]);
 
@@ -228,26 +237,39 @@ const ChatScreen = ({ navigation, route }) => {
             scrollViewRef.current?.scrollToEnd({ animated: true })
           }
         >
-          {messages.map((message) => (
-            <TouchableOpacity
-              key={message.id}
-              onLongPress={() => handleLongPress(message)}
-              delayLongPress={500}
-            >
-              <View
-                style={[
-                  styles.messageContainer,
-                  message.senderId === currentUser.id ? styles.userMessage : styles.otherMessage,
-                ]}
+          {messages.map((message) => {
+            // Determine display name for sender
+            let displayName = "";
+            if (message.senderId === currentUser.id) {
+              displayName = "You";
+            } else if (!currentUser.isCareNavigator) {
+              // Client's view: other is care navigator
+              displayName = "Care Navigator";
+            } else {
+              // Care navigator's view: other is client
+              displayName = clientFullName ? clientFullName : message.senderId;
+            }
+            return (
+              <TouchableOpacity
+                key={message.id}
+                onLongPress={() => handleLongPress(message)}
+                delayLongPress={500}
               >
-                {/* Message Bubble */}
-                <View style={styles.messageBubble}>
-                  <Text style={styles.senderName}>{message.senderName}</Text>
-                  <Text style={styles.messageText}>{message.text}</Text>
+                <View
+                  style={[
+                    styles.messageContainer,
+                    message.senderId === currentUser.id ? styles.userMessage : styles.otherMessage,
+                  ]}
+                >
+                  {/* Message Bubble */}
+                  <View style={styles.messageBubble}>
+                    <Text style={styles.senderName}>{displayName}</Text>
+                    <Text style={styles.messageText}>{message.text}</Text>
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
         {/* Input Field and Send Button */}
