@@ -41,7 +41,7 @@ Your medication notification system is now fully implemented with comprehensive 
 
 ```bash
 # Navigate to your project folder
-cd "c:\Users\LENOVO\Downloads\Sashi\Samasha"
+cd "c:\Users\Project-folder"
 
 # Run the test script
 node test-medication-system.js
