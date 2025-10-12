@@ -8,9 +8,11 @@ import {
 } from "react-native";
 import { Ionicons, Foundation } from "@expo/vector-icons";
 import { useRoute } from "@react-navigation/native";
+import { useAutomaticLogout } from "../screens/AutoLogout";
 
 const SideNavigationClient = ({ navigation, onClose }) => {
   const route = useRoute();
+  const { resetTimer } = useAutomaticLogout();
   const [slideAnim] = React.useState(new Animated.Value(-300)); // Slide-in animation
 
   // Menu items with routes and icons
@@ -19,7 +21,7 @@ const SideNavigationClient = ({ navigation, onClose }) => {
     {
       name: "CarePlan",
       icon: require("../assets/CarePlanIcon.png"),
-      route: "CarePlanC",
+      route: "ClientCarePlansScreen",
     },
     {
       name: "Medication",
@@ -27,11 +29,16 @@ const SideNavigationClient = ({ navigation, onClose }) => {
       route: "MedicationC",
     },
     {
+      name: "Documents",
+      icon: "document-text-outline",
+      route: "Documents",
+    },
+    {
       name: "Notifications",
       icon: "notifications-outline",
       route: "NotificationsC",
     },
-    { name: "Profile", icon: "person-outline", route: "Profile" },
+    { name: "Profile", icon: "person-outline", route: "ProfileC" },
   ];
 
   // Slide-in animation when the component mounts
@@ -43,13 +50,19 @@ const SideNavigationClient = ({ navigation, onClose }) => {
   }, []);
 
   const handleNavigation = (route) => {
+    resetTimer();
     navigation.navigate(route);
-    // onClose();
+    onClose();
+  };
+
+  const handleInteraction = () => {
+    resetTimer();
   };
 
   return (
     <Animated.View
       style={[styles.container, { transform: [{ translateX: slideAnim }] }]}
+      onTouchStart={handleInteraction}
     >
       {/* Close Button */}
       <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -68,6 +81,7 @@ const SideNavigationClient = ({ navigation, onClose }) => {
             route.name === item.route && styles.activeMenuItem, // Highlight active item
           ]}
           onPress={() => handleNavigation(item.route)}
+          onPressIn={handleInteraction}
         >
           {typeof item.icon === "string" ? (
             item.icon === "clipboard-notes" ? (

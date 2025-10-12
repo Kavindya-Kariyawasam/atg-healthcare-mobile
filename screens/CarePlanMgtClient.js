@@ -1,61 +1,240 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
+  TextInput,
+  FlatList,
   StyleSheet,
   TouchableOpacity,
   StatusBar,
-  useColorScheme,
+  ActivityIndicator,
 } from "react-native";
-import SideNavigationClient from "../Components/SideNavigationClient";
-import BottomNavigationClient from "../Components/BottomNavigationClient";
 import { Ionicons } from "@expo/vector-icons";
+import { useIsFocused } from "@react-navigation/native";
+import BottomNavigationClient from "../Components/BottomNavigationClient";
+import SideNavigationClient from "../Components/SideNavigationClient";
+import ArticleCard from "../Components/ArticleCard";
+import TimelineItemClient from "../Components/TimelineItemClient";
 
-const CarePlanMgtClient = ({ navigation }) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const scheme = useColorScheme();
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
+const CarePlanClientScreen = ({ route, navigation }) => {
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [searchText, setSearchText] = useState("");
+  const [isSideNavVisible, setIsSideNavVisible] = useState(false);
+
+  // Get carePlanId and clientUsername from route params
+  const carePlanId = route?.params?.carePlanId;
+  const clientUsername = route?.params?.clientUsername;
+  const isFocused = useIsFocused();
+
+  const fetchTasks = async () => {
+    setLoading(true);
+    try {
+      console.log("=== CLIENT TASK FETCH DEBUG ===");
+      console.log("carePlanId:", carePlanId);
+      console.log("clientUsername:", clientUsername);
+      console.log("Type of carePlanId:", typeof carePlanId);
+
+      if (!carePlanId) {
+        console.error("No care plan ID provided");
+        setTasks([]);
+        return;
+      }
+
+      // Fetch tasks for the specific care plan ID
+      const apiUrl = `https://sue7dsbf09.execute-api.ap-south-1.amazonaws.com/dev/tasks?care_plan_id=${carePlanId}`;
+      console.log("API URL:", apiUrl);
+
+      const response = await fetch(apiUrl);
+      console.log("Response status:", response.status);
+
+      const result = await response.json();
+      console.log("API Response:", result);
+      console.log("Number of tasks received:", result ? result.length : 0);
+
+      const sortedTasks = (result || []).sort(
+        (a, b) => new Date(a.start || 0) - new Date(b.start || 0)
+      );
+      console.log("Sorted tasks:", sortedTasks);
+      console.log("=== END CLIENT TASK FETCH DEBUG ===");
+
+      setTasks(sortedTasks);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // Reload tasks when screen focused or carePlanId changes
+  useEffect(() => {
+    if (isFocused) {
+      fetchTasks();
+    }
+  }, [isFocused, carePlanId]);
+
+  const articleData = [
+    {
+      id: "1",
+      type: "Article",
+      duration: "5 min",
+      title: "What is a care plan?",
+    },
+  ];
+
+  // Filter tasks by selected month and search text
+  const filteredTasks = tasks.filter((task) => {
+    const taskDate = new Date(task.start);
+    const taskMonth = taskDate.getMonth();
+    const matchesMonth = taskMonth === selectedMonth;
+
+    const matchesSearch =
+      !searchText ||
+      task.title?.toLowerCase().includes(searchText.toLowerCase()) ||
+      task.start?.includes(searchText);
+
+    return matchesMonth && matchesSearch;
+  });
+
+  const renderTaskItem = ({ item, index }) => (
+    <TimelineItemClient
+      key={item.id || index}
+      task={item}
+      onPress={() => {
+        navigation.navigate("Task", {
+          taskId: item.id,
+          task: item,
+        });
+      }}
+    />
+  );
+
+  const renderHeader = () => (
+    <View>
+      {/* Articles Section */}
+      <View style={{ marginVertical: 5 }}>
+        <FlatList
+          data={articleData}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingHorizontal: 10 }}
+          renderItem={({ item }) => (
+            <View style={{ minHeight: 180, justifyContent: "center" }}>
+              <ArticleCard
+                title={item.title}
+                duration={item.duration}
+                type={item.type}
+                content={item.content}
+              />
+            </View>
+          )}
+          scrollEnabled={false}
+        />
+      </View>
+
+      {/* Tasks Section */}
+      <Text style={styles.taskHeader}>Tasks for {MONTHS[selectedMonth]}</Text>
+
+      <View style={styles.monthRow}>
+        {MONTHS.map((m, idx) => (
+          <TouchableOpacity
+            key={m}
+            style={[
+              styles.monthButton,
+              selectedMonth === idx && styles.monthButtonSelected,
+            ]}
+            onPress={() => setSelectedMonth(idx)}
+          >
+            <Text
+              style={[
+                styles.monthButtonText,
+                selectedMonth === idx && styles.monthButtonTextSelected,
+              ]}
+            >
+              {m}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={styles.searchContainer}>
+        <Ionicons
+          name="search"
+          size={20}
+          color="#B3E5FC"
+          style={styles.searchIcon}
+        />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by date (YYYY-MM-DD)..."
+          value={searchText}
+          onChangeText={setSearchText}
+        />
+      </View>
+    </View>
+  );
+
+  const renderEmptyComponent = () => (
+    <Text style={{ textAlign: "center", marginTop: 20, color: "#888" }}>
+      No tasks found for this month.
+    </Text>
+  );
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        barStyle={scheme === "dark" ? "light-content" : "dark-content"}
-        translucent={true}
-        backgroundColor={scheme === "dark" ? "black" : "transparent"}
-      />
+      <StatusBar barStyle="dark-content" backgroundColor="#00BCD4" />
 
-      {/* Header with Hamburger Icon */}
+      {/* Header with menu button */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={toggleMenu}>
-          <Ionicons
-            name={isMenuOpen ? "close" : "menu"}
-            size={30}
-            color="black"
-          />
+        <TouchableOpacity
+          onPress={() => setIsSideNavVisible(!isSideNavVisible)}
+          style={{ position: "absolute", left: 20, top: 45, zIndex: 10 }}
+        >
+          <Ionicons name="menu" size={28} color="white" />
         </TouchableOpacity>
-        <Text style={styles.headerText}>CarePlan ManagementC</Text>
+        <Text style={styles.headerTitle}>Your Care Plan Tasks</Text>
+        <Text style={styles.headerSubtitle}>View and track your tasks</Text>
       </View>
 
-      {/* Overlay for Side Navigation */}
-      {isMenuOpen && (
-        <View style={styles.overlay}>
-          <SideNavigationClient navigation={navigation} onClose={toggleMenu} />
-          <TouchableOpacity
-            style={styles.overlayBackground}
-            onPress={toggleMenu}
-          />
-        </View>
+      {/* Side Navigation */}
+      {isSideNavVisible && (
+        <SideNavigationClient
+          navigation={navigation}
+          onClose={() => setIsSideNavVisible(false)}
+        />
       )}
 
-      {/* Dashboard Content */}
-      <View style={styles.content}>
-        <Text style={styles.dashboardText}>
-          Welcome to the CarePlan ManagementC
-        </Text>
-      </View>
+      {loading ? (
+        <ActivityIndicator size="large" color="#00BCD4" style={{ flex: 1 }} />
+      ) : (
+        <FlatList
+          data={filteredTasks}
+          renderItem={renderTaskItem}
+          keyExtractor={(item) =>
+            item.id ? item.id.toString() : Math.random().toString()
+          }
+          ListHeaderComponent={renderHeader}
+          ListEmptyComponent={renderEmptyComponent}
+          contentContainerStyle={{ paddingBottom: 120 }}
+        />
+      )}
 
       {/* Bottom Navigation */}
       <BottomNavigationClient navigation={navigation} />
@@ -64,46 +243,82 @@ const CarePlanMgtClient = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
+  container: { flex: 1, backgroundColor: "#F8FDFF" },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 15,
-    backgroundColor: "#f8f9fa",
-    marginTop: 30,
-  },
-  headerText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginLeft: 15,
-  },
-  content: {
-    flex: 1,
+    paddingTop: 40,
+    paddingBottom: 10,
+    paddingHorizontal: 20,
+    backgroundColor: "#00BCD4",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 60,
   },
-  dashboardText: {
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: "#fff",
+    marginTop: 4,
+  },
+  taskHeader: {
     fontSize: 20,
     fontWeight: "bold",
-    textAlign: "center",
+    paddingHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 5,
+    color: "#0a0efff3",
   },
-  overlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
+  monthRow: {
     flexDirection: "row",
-    zIndex: 1,
+    justifyContent: "center",
+    marginVertical: 10,
+    flexWrap: "wrap",
   },
-  overlayBackground: {
+  monthButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#00BCD4",
+    marginHorizontal: 4,
+    marginBottom: 4,
+    backgroundColor: "#fff",
+  },
+  monthButtonSelected: {
+    backgroundColor: "#00BCD4",
+  },
+  monthButtonText: {
+    color: "#00BCD4",
+    fontWeight: "bold",
+  },
+  monthButtonTextSelected: {
+    color: "#fff",
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    height: 60,
+    marginTop: 0,
+    marginBottom: 10,
+    backgroundColor: "#00BCD4",
+    paddingHorizontal: 10,
+  },
+  searchInput: {
+    height: 40,
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    borderColor: "#CCCCCC",
+    borderWidth: 2,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    backgroundColor: "#E0F7FA",
+    color: "#000",
+  },
+  searchIcon: {
+    marginRight: 10,
   },
 });
 
-export default CarePlanMgtClient;
+export default CarePlanClientScreen;
