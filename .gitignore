@@ -51,9 +51,6 @@ Desktop.ini
 # typescript
 *.tsbuildinfo
 
-# package-lock
-package-lock.json
-
 # IDE
 .idea/
 .vscode/
